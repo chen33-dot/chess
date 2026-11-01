@@ -1,5 +1,15 @@
 # 弈变 · 肉鸽象棋
 
+## 网页版 v2
+
+新增适配手机与电脑的浏览器版，支持人机练习、同屏双人和跨设备随机匹配。运行 `npm start` 后打开 http://localhost:8080 。前端位于 `web/`，可部署 GitHub Pages；联机服务位于 `server/`，无第三方运行依赖。
+
+![网页界面](web-preview.png)
+
+部署步骤见 [DEPLOY.md](DEPLOY.md)。已提供 GitHub Pages 工作流与 Render 免费服务 Blueprint；联机上线仍需部署匹配服务并填写 `web/config.js` 的服务地址。浏览器不能仅凭 GitHub Pages 完成公共随机匹配。
+
+以下为保留的桌面版说明。
+
 依据同目录《开发文档.docx》的「肉鸽象棋规则最终完整版 v1.1」开发的本地桌面游戏。原始文档保留不变。Python 3.9+，使用标准库 Tkinter，无网络服务、无第三方运行依赖。
 
 ## 启动
