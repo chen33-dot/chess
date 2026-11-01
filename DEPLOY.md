@@ -1,5 +1,7 @@
 # 网页与联机部署
 
+本仓库当前网页入口为 https://chen33-dot.github.io/chess/ ，默认匹配服务为 https://yibian-match.onrender.com 。普通玩家直接打开网页点击随机匹配，不需手工配置地址。下文的部署流程供重新部署或 fork 使用。
+
 网页静态文件在 `web/`，不需要构建或 CDN。GitHub Pages 托管前端；`server/` 是独立 Node.js 裁判与随机匹配服务。没有服务时，人机练习和同屏双人仍可玩，随机匹配会提示未配置，不会伪装匹配成功。
 
 ## 本机试玩

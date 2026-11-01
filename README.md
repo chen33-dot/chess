@@ -6,7 +6,9 @@
 
 ![网页界面](web-preview.png)
 
-部署步骤见 [DEPLOY.md](DEPLOY.md)。已提供 GitHub Pages 工作流与 Render 免费服务 Blueprint；联机上线仍需部署匹配服务并填写 `web/config.js` 的服务地址。浏览器不能仅凭 GitHub Pages 完成公共随机匹配。
+游戏入口：[打开弈变](https://chen33-dot.github.io/chess/)。网页已默认连接 `https://yibian-match.onrender.com` 的匹配服务，两位玩家分别点击「随机匹配」即可配对。免费实例休眠后首次连接可能需要约一分钟。
+
+重新部署步骤见 [DEPLOY.md](DEPLOY.md)。已提供 GitHub Pages 工作流与 Render 免费服务 Blueprint。浏览器不能仅凭 GitHub Pages 完成公共随机匹配。
 
 以下为保留的桌面版说明。
 
