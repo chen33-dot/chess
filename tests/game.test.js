@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {webcrypto} from 'node:crypto';
-globalThis.crypto=webcrypto;
+if(!globalThis.crypto)globalThis.crypto=webcrypto;
 import {Game,canMove,actions} from '../web/engine.js';
 import {Service} from '../server/service.js';
 import {createServer} from '../server/index.js';

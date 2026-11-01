@@ -49,7 +49,7 @@ async function request(path,data={},timeout=12000){
     const out=await response.json();if(!response.ok)throw Error(out.error||'服务暂不可用');return out;
   }finally{clearTimeout(t);}
 }
-function accept(out){if(out.room&&out.room===online?.room&&out.game.ply<state.ply)return;online=out;connected=true;if(out.game){state=out.game;if(selected!==null&&state.board[selected]?.side!==mine())selected=null;notice(state.result||state.history.at(-1)||'匹配成功，红方先手。');}
+function accept(out){if(out.room&&out.room===online?.room&&(out.game.ply<state.ply||(state.result&&!out.game.result)))return;online=out;connected=true;if(out.game){state=out.game;if(selected!==null&&state.board[selected]?.side!==mine())selected=null;notice(state.result||state.history.at(-1)||'匹配成功，红方先手。');}
   $('connection').textContent=out.status==='waiting'?'正在寻找对手… 可取消匹配':out.status==='playing'?(out.opponentOnline?'已连接 · 对手在线':'对手暂时离线，保留90秒重连时间'):'尚未匹配，点击随机匹配开始。';render();}
 async function poll(){const version=epoch;if(mode!=='online')return;try{const out=await request('/state');if(version!==epoch)return;accept(out);}catch(e){if(version!==epoch)return;connected=false;$('connection').textContent='连接中断：'+e.message+'。正在重连；会话失效时请重新匹配。';render();}if(version===epoch)timer=setTimeout(poll,1500);}
 async function act(a){if(!active())return;const version=epoch;busy=true;render();try{
@@ -64,7 +64,7 @@ async function leave(){if(mode!=='online')return true;if(online?.status==='playi
   try{await request('/leave');}catch(e){notice('无法通知服务器；离线90秒后判离开。');}
   epoch++;clearTimeout(timer);mode='local';online=null;connected=false;busy=false;return true;
 }
-async function startLocal(next){if(!await leave())return;if(mode!=='online'&&state.ply&&!state.result&&!confirm('开始新局？当前练习进度不会保存。'))return;epoch++;clearTimeout(timer);mode=next;game=new Game();state=game.public();selected=null;busy=false;notice('新局已就绪，红方先手。');$('connection').textContent='单机模式 · 无需联网';render();}
+async function startLocal(next){const wasOnline=mode==='online';if(!await leave())return;if(!wasOnline&&state.ply&&!state.result&&!confirm('开始新局？当前练习进度不会保存。'))return;epoch++;clearTimeout(timer);mode=next;game=new Game();state=game.public();selected=null;busy=false;notice('新局已就绪，红方先手。');$('connection').textContent='单机模式 · 无需联网';render();}
 $('ai').onclick=()=>startLocal('ai');$('local').onclick=()=>startLocal('local');
 $('leave').onclick=async()=>{if(await leave()){mode='local';game=new Game();state=game.public();selected=null;$('connection').textContent='已离开联机模式';render();}};
 $('online').onclick=async()=>{
