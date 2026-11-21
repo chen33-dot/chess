@@ -17,7 +17,7 @@ async function showState(next,version=epoch){
   if(version!==epoch)return;
   state=next;selected=null;
   if(changed&&a?.kind==='move'){
-    const trail={src:a.src,dst:a.dst};trails.push(trail);
+    const trail={src:a.src,dst:a.dst,side:next.board[a.dst].side};trails.push(trail);
     later(()=>{trails=trails.filter(t=>t!==trail);render();},3000);
   }
   notice(state.result||state.history.at(-1)||'新局已就绪，红方先手。');
@@ -69,6 +69,7 @@ function render(){
     parts.push('</g>');
   }
   for(const t of trails){
+    if(t.side===mine())continue;
     const x=30+t.src%9*60,y=30+Math.floor(t.src/9)*60,dx=(t.dst%9-t.src%9)*60,dy=(Math.floor(t.dst/9)-Math.floor(t.src/9))*60,d=Math.hypot(dx,dy);
     parts.push(`<g class="move-trail" pointer-events="none"><circle cx="${x}" cy="${y}" r="24" fill="none" stroke="#16853d" stroke-width="3"/><path d="M${x} ${y}L${x+dx-dx/d*27} ${y+dy-dy/d*27}" stroke="#16853d" stroke-width="3" marker-end="url(#move-arrow)" fill="none"/></g>`);
   }
