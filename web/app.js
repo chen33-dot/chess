@@ -2,12 +2,21 @@ import {Game,canMove,names,sideName,chooseAction} from './engine.js';
 import {API_URL} from './config.js';
 const $=id=>document.getElementById(id);
 let mode='ai',game=new Game(),state=game.public(),selected=null,busy=false,online=null,connected=false,timer,epoch=0;
-let revealing=false,glow=null,trails=[],victory=false,victoryTimer=null,updates=Promise.resolve();
+let revealing=false,glow=null,trails=[],capturePreview=null,victory=false,victoryTimer=null,updates=Promise.resolve();
 const effectTimers=new Set();
 function later(fn,ms){const id=setTimeout(()=>{effectTimers.delete(id);fn();},ms);effectTimers.add(id);return id;}
-function clearEffects(){for(const id of effectTimers)clearTimeout(id);effectTimers.clear();revealing=false;glow=null;trails=[];victory=false;victoryTimer=null;}
+function clearEffects(){for(const id of effectTimers)clearTimeout(id);effectTimers.clear();revealing=false;glow=null;trails=[];capturePreview=null;victory=false;victoryTimer=null;}
 async function showState(next,version=epoch){
   const changed=next.ply>state.ply,a=next.last;
+  const mover=a?.kind==='move'?state.board[a.src]:null,target=a?.kind==='move'?state.board[a.dst]:null;
+  const capture=changed&&next.ply===state.ply+1&&mover?.face&&target?.face&&mover.side!==target.side;
+  if(capture&&(mode==='local'||mover.side!==mine())){
+    revealing=true;selected=null;capturePreview={src:a.src,dst:a.dst,side:mover.side,preview:true};
+    notice('吃子预告 · 3 秒后落子');render();
+    await new Promise(resolve=>setTimeout(resolve,3000));
+    if(version!==epoch)return;
+    revealing=false;capturePreview=null;
+  }
   if(changed&&a&&(a.kind==='flip'||a.kind==='mutate')){
     revealing=true;glow=a.src;selected=null;notice('弈变中…');render();
     await new Promise(resolve=>setTimeout(resolve,1000));
@@ -16,7 +25,7 @@ async function showState(next,version=epoch){
   }
   if(version!==epoch)return;
   state=next;selected=null;
-  if(changed&&a?.kind==='move'){
+  if(changed&&a?.kind==='move'&&!capture){
     const trail={src:a.src,dst:a.dst,side:next.board[a.dst].side};trails.push(trail);
     later(()=>{trails=trails.filter(t=>t!==trail);render();},3000);
   }
@@ -68,10 +77,10 @@ function render(){
     if(movable)parts.push(`<circle cx="${x}" cy="${y}" r="${p?27:6}" stroke="${p?'#bd4738':'#557c55'}" stroke-width="3" fill="${p?'none':'#557c55'}"/>`);
     parts.push('</g>');
   }
-  for(const t of trails){
-    if(t.side===mine())continue;
+  for(const t of [...trails,...(capturePreview?[capturePreview]:[])]){
+    if(!t.preview&&t.side===mine())continue;
     const x=30+t.src%9*60,y=30+Math.floor(t.src/9)*60,dx=(t.dst%9-t.src%9)*60,dy=(Math.floor(t.dst/9)-Math.floor(t.src/9))*60,d=Math.hypot(dx,dy);
-    parts.push(`<g class="move-trail" pointer-events="none"><circle cx="${x}" cy="${y}" r="24" fill="none" stroke="#16853d" stroke-width="3"/><path d="M${x} ${y}L${x+dx-dx/d*27} ${y+dy-dy/d*27}" stroke="#16853d" stroke-width="3" marker-end="url(#move-arrow)" fill="none"/></g>`);
+    parts.push(`<g class="move-trail${t.preview?' capture-preview':''}" pointer-events="none"><circle cx="${x}" cy="${y}" r="${t.preview?27:24}" fill="none" stroke="#16853d" stroke-width="3"/><path d="M${x} ${y}L${x+dx-dx/d*27} ${y+dy-dy/d*27}" stroke="#16853d" stroke-width="3" marker-end="url(#move-arrow)" fill="none"/></g>`);
   }
   if(glow!==null)parts.push(`<circle class="reveal-glow" pointer-events="none" cx="${30+glow%9*60}" cy="${30+Math.floor(glow/9)*60}" r="27" stroke="white" stroke-width="4" fill="none"/>`);
   if(victory)parts.push(`<g class="victory-overlay" role="status" aria-label="${state.result}"><rect width="540" height="600" fill="#13251dcc"/><rect x="65" y="220" width="410" height="160" rx="12" fill="#203127" stroke="#dcbc7b" stroke-width="2"/><text x="270" y="288" text-anchor="middle" fill="#efe6d1" font-size="40" font-family="system-ui,sans-serif">${state.result.split(' · ')[0]}</text><text x="270" y="339" text-anchor="middle" fill="#dcbc7b" font-size="18">吃将获胜 · 5 秒后重置棋盘</text></g>`);

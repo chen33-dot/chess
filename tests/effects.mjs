@@ -14,6 +14,7 @@ try{
   await page.route('**/app.js',route=>route.fulfill({contentType:'text/javascript',body:source+`
 globalThis.fixture=(pieces,turn='red')=>{epoch++;clearEffects();clearTimeout(timer);mode='local';busy=false;selected=null;game=new Game();game.board=Array(90).fill(null);for(const [i,kind,side,face=true]of pieces)game.board[i]={kind,side,face};game.turn=turn;game.repetitions=new Map([[game.key(),1]]);state=game.public();render();};
 globalThis.networkFixture=(next,side='red',viewMode='online')=>{epoch++;clearEffects();mode=viewMode;online={room:'test-room',side,status:'playing'};connected=true;state={...next,ply:0,result:null};render();return viewMode==='ai'?showState(next):accept({room:'test-room',side,status:'playing',opponentOnline:true,game:next});};
+globalThis.captureFixture=(actor,viewer,viewMode='online')=>{fixture([[85,'K','red'],[4,'K','black'],[40,'R',actor],[41,'P',actor==='red'?'black':'red']],actor);mode=viewMode;online={room:'capture-room',side:viewer,status:'playing'};connected=true;game.play({kind:'move',src:40,dst:41});globalThis.captureDone=viewMode==='online'?accept({room:'capture-room',side:viewer,status:'playing',opponentOnline:true,game:game.public()}):showState(game.public());};
 `}));
   await page.goto('http://localhost:8080');
   await page.evaluate(()=>fixture([[85,'K','red'],[4,'K','black'],[40,'P','red',false]]));
@@ -45,10 +46,36 @@ globalThis.networkFixture=(next,side='red',viewMode='online')=>{epoch++;clearEff
   await page.click('[data-pos="4"]');await page.click('[data-pos="3"]');
   assert.equal(await page.locator('.move-trail').count(),1);
   assert.equal(await page.locator('.move-trail circle').getAttribute('cy'),'30');
+  // Opponent captures hold both pieces for three seconds; own captures remain immediate.
+  for(const [actor,viewer,viewMode]of [['black','red','ai'],['black','red','online'],['red','black','online']]){
+    await page.evaluate(args=>captureFixture(...args),[actor,viewer,viewMode]);
+    await page.waitForSelector('.capture-preview');
+    const before=await page.getAttribute('[data-pos="41"]','aria-label');
+    assert.ok((await page.getAttribute('[data-pos="40"]','aria-label')).includes('车'));
+    assert.ok(before.includes('兵')||before.includes('卒'));
+    await page.waitForTimeout(2200);
+    assert.equal(await page.locator('.capture-preview').count(),1);
+    assert.equal(await page.getAttribute('[data-pos="41"]','aria-label'),before);
+    assert.equal(await page.textContent('#count'),'0 步');
+    await page.click('[data-pos="85"]');assert.equal(await page.textContent('#count'),'0 步');
+    await page.evaluate(()=>captureDone);
+    assert.ok((await page.getAttribute('[data-pos="40"]','aria-label')).includes('空位'));
+    assert.ok((await page.getAttribute('[data-pos="41"]','aria-label')).includes('车'));
+    assert.equal(await page.locator('.move-trail').count(),0);
+  }
+  for(const side of ['red','black']){
+    await page.evaluate(args=>{captureFixture(...args);return captureDone;},[side,side,'online']);
+    assert.equal(await page.locator('.capture-preview').count(),0);
+    assert.equal(await page.textContent('#count'),'1 步');
+  }
   for(const side of ['red','black']){
     const src=side==='red'?13:76,dst=side==='red'?4:85;
     await page.evaluate(({side,src})=>fixture([[85,'K','red'],[4,'K','black'],[src,'R',side]],side),{side,src});
-    await page.click(`[data-pos="${src}"]`);await page.click(`[data-pos="${dst}"]`);await page.waitForSelector('.victory-overlay');
+    await page.click(`[data-pos="${src}"]`);await page.click(`[data-pos="${dst}"]`);await page.waitForSelector('.capture-preview');
+    assert.equal(await page.locator('.victory-overlay').count(),0);
+    await page.waitForTimeout(2200);assert.equal(await page.locator('.victory-overlay').count(),0);
+    assert.equal(await page.locator('.capture-preview').count(),1);
+    await page.waitForSelector('.victory-overlay');assert.equal(await page.locator('.move-trail').count(),0);
     assert.ok((await page.textContent('.victory-overlay')).includes(side==='red'?'红方获胜':'黑方获胜'));
     if(side==='red')await page.screenshot({path:'victory-effect-preview.png'});
     await page.waitForTimeout(4200);assert.equal(await page.locator('.victory-overlay').count(),1);
@@ -60,5 +87,5 @@ globalThis.networkFixture=(next,side='red',viewMode='online')=>{epoch++;clearEff
   await page.waitForSelector('.victory-overlay');await page.waitForSelector('.victory-overlay',{state:'detached',timeout:7000});
   await page.waitForFunction(()=>document.querySelector('#connection').textContent.includes('等待重新匹配'));
   assert.equal(await page.locator('.piece').count(),32);assert.deepEqual(errors,[]);
-  console.log('Effects passed: delayed flip/mutation, 3s arrow, red/black 5s victory reset, online reset.');
+  console.log('Effects passed: reveal, opponent trails, 3s capture preview, capture then 5s victory, online reset.');
 }finally{await browser?.close();server.closeAllConnections();await new Promise(r=>server.close(r));}
