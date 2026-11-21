@@ -19,11 +19,11 @@ try{
   await pb.click('#online');
   for(const page of [pa,pb])await page.waitForFunction(()=>document.querySelector('#connection').textContent.includes('对手在线'));
   assert.ok((await pa.textContent('#mode')).includes('红方'));
-  await pa.click('[data-pos="0"]');await pb.waitForFunction(()=>document.querySelector('#count').textContent==='1 步');
+  await pa.click('[data-pos="0"]');await pa.waitForSelector('.reveal-glow');assert.ok((await pa.getAttribute('[data-pos="0"]','aria-label')).includes('暗棋'));await pb.waitForSelector('.reveal-glow');await pb.waitForFunction(()=>document.querySelector('#count').textContent==='1 步');
   await pb.click('[data-pos="8"]');await pa.waitForFunction(()=>document.querySelector('#count').textContent==='2 步');
   await pa.reload();await pa.click('#online');await pa.waitForFunction(()=>document.querySelector('#count').textContent==='2 步');
   pa.on('dialog',d=>d.accept());await pa.click('#leave');await pb.waitForFunction(()=>document.querySelector('#turn').textContent.includes('黑方获胜'));
   await pb.click('#leave');
-  await pa.click('#local');await pa.click('[data-pos="0"]');assert.equal(await pa.textContent('#count'),'1 步');
+  await pa.click('#local');await pa.click('[data-pos="0"]');await pa.waitForFunction(()=>document.querySelector('#count').textContent==='1 步');
   assert.deepEqual(errors,[]);console.log('Browser E2E passed: desktop/mobile, match, two moves, reconnect, leave, local play.');
 }finally{await browser?.close();if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}}
